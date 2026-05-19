@@ -19,18 +19,20 @@ services:
     restart: unless-stopped
 
     # Load your API keys and config from .env
+    # run.sh checks for .env and creates it from .env.example if missing
     env_file: .env
 
     # Override internal connection strings so services talk via localhost
+    # Defaults are set so docker compose doesn't warn if .env is missing
     environment:
-      DATABASE_URL:           mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@127.0.0.1:3306/${MYSQL_DATABASE}
+      DATABASE_URL:           mysql://${MYSQL_USER:-trader}:${MYSQL_PASSWORD:-trader_pass}@127.0.0.1:3306/${MYSQL_DATABASE:-crypto_trader}
       CELERY_BROKER_URL:      redis://127.0.0.1:6379/0
       CELERY_RESULT_BACKEND:  redis://127.0.0.1:6379/1
       REDIS_URL:              redis://127.0.0.1:6379/0
 
     ports:
-      - "5000:5000"   # Flask trading dashboard
-      - "5555:5555"   # Flower Celery monitor
+      - "5002:5000"   # Flask trading dashboard  (5001 on host → 5000 in container)
+      - "5556:5555"   # Flower Celery monitor     (5556 on host → 5555 in container)
       # Uncomment below to expose MySQL/Redis to your host machine:
       # - "3306:3306"
       # - "6379:6379"
@@ -41,7 +43,7 @@ services:
 
     # Healthcheck: polls the Flask dashboard
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]   # internal port stays 5000
       interval: 30s
       timeout: 10s
       retries: 5

@@ -5,6 +5,7 @@
 # =============================================================================
 FROM python:3.12-slim
 
+
 # ── 1. System packages ─────────────────────────────────────────────────────────
 #   mysql-server   : embedded MySQL 8
 #   redis-server   : embedded Redis 7
@@ -12,12 +13,12 @@ FROM python:3.12-slim
 #   gcc / pkg-config / libmysqlclient-dev : needed to compile mysqlclient wheel
 #   gosu           : lets entrypoint drop privileges for mysql init
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        mysql-server \
+        mariadb-server \
         redis-server \
         supervisor \
         gcc \
         pkg-config \
-        default-libmysqlclient-dev \
+        libmariadb-dev \
         curl \
         gosu \
     && rm -rf /var/lib/apt/lists/*
@@ -38,7 +39,7 @@ RUN mkdir -p /data/mysql /data/redis /data/logs /var/run/mysqld \
     && chown -R mysql:mysql /data/mysql /var/run/mysqld
 
 # ── 5. MySQL config ────────────────────────────────────────────────────────────
-RUN cat > /etc/mysql/mysql.conf.d/zz-crypto.cnf << 'EOF'
+RUN mkdir -p /etc/mysql/conf.d && cat > /etc/mysql/conf.d/zz-crypto.cnf << 'EOF'
 [mysqld]
 datadir                = /data/mysql
 socket                 = /var/run/mysqld/mysqld.sock
@@ -77,10 +78,12 @@ ENV CELERY_BROKER_URL=redis://127.0.0.1:6379/0
 ENV CELERY_RESULT_BACKEND=redis://127.0.0.1:6379/1
 ENV REDIS_URL=redis://127.0.0.1:6379/0
 
-EXPOSE 5000   # Flask dashboard
-EXPOSE 5555   # Flower task monitor
-EXPOSE 3306   # MySQL  (remove if you don't want external DB access)
-EXPOSE 6379   # Redis  (remove if you don't want external Redis access)
+EXPOSE 5000
+# Flask dashboard (mapped to 5001 on host via docker-compose)
+EXPOSE 5555
+# Flower monitor (mapped to 5556 on host via docker-compose)
+EXPOSE 3306
+EXPOSE 6379
 
 # Mount this volume to persist MySQL + Redis data across container restarts
 VOLUME ["/data"]

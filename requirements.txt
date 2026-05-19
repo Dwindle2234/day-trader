@@ -1,0 +1,36 @@
+# ── Web framework ─────────────────────────────────────────────────────────────
+flask==3.1.0
+flask-sqlalchemy==3.1.1
+flask-socketio==5.4.1        # real-time dashboard updates
+
+# ── Database ───────────────────────────────────────────────────────────────────
+sqlalchemy==2.0.36
+mysqlclient==2.2.4
+alembic==1.14.0              # schema migrations
+
+# ── Task queue ─────────────────────────────────────────────────────────────────
+celery==5.4.0
+redis==5.2.0
+flower==2.0.1                # Celery web monitor
+
+# ── Coinbase ───────────────────────────────────────────────────────────────────
+coinbase-advanced-py==1.8.0
+
+# ── Market data (free APIs) ────────────────────────────────────────────────────
+requests==2.32.3
+
+# ── Technical analysis ─────────────────────────────────────────────────────────
+pandas>=2.3.2
+pandas-ta==0.4.71b0           # 130+ indicators
+
+# ── AI providers (active provider set via AI_PROVIDER in .env) ────────────────
+groq==0.13.0                 # Groq  — fast + free tier (default)
+anthropic==0.40.0            # Anthropic Claude — fallback / production
+
+# ── Utilities ──────────────────────────────────────────────────────────────────
+python-dotenv==1.0.1
+pydantic==2.10.3
+loguru==0.7.3                # structured logging
+tenacity==9.0.0              # retry decorator
+schedule==1.2.2
+pytz==2024.2
