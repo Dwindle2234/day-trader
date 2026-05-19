@@ -1,0 +1,61 @@
+# =============================================================================
+# Crypto Trader — single-container docker-compose
+#
+# Everything (MySQL, Redis, Celery worker, Celery beat, Flower, Flask)
+# runs inside ONE container managed by supervisord.
+#
+# Usage:
+#   cp .env.example .env   # fill in your API keys
+#   docker compose up -d --build
+# =============================================================================
+
+services:
+
+  crypto-trader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crypto_trader
+    restart: unless-stopped
+
+    # Load your API keys and config from .env
+    env_file: .env
+
+    # Override internal connection strings so services talk via localhost
+    environment:
+      DATABASE_URL:           mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@127.0.0.1:3306/${MYSQL_DATABASE}
+      CELERY_BROKER_URL:      redis://127.0.0.1:6379/0
+      CELERY_RESULT_BACKEND:  redis://127.0.0.1:6379/1
+      REDIS_URL:              redis://127.0.0.1:6379/0
+
+    ports:
+      - "5000:5000"   # Flask trading dashboard
+      - "5555:5555"   # Flower Celery monitor
+      # Uncomment below to expose MySQL/Redis to your host machine:
+      # - "3306:3306"
+      # - "6379:6379"
+
+    volumes:
+      # Persist MySQL data and Redis snapshots across container restarts
+      - crypto_data:/data
+
+    # Healthcheck: polls the Flask dashboard
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s    # give MySQL + all services time to start
+
+    # Resource limits (tune to your server)
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M
+
+volumes:
+  # Named volume — survives `docker compose down` but NOT `docker compose down -v`
+  crypto_data:
+    driver: local
