@@ -96,7 +96,7 @@ def coinbase_ohlcv_1h_task(self):
     """Fetch hourly OHLCV candles from Coinbase — every hour."""
     try:
         from app.collectors.coinbase import CoinbaseOHLCVCollector
-        return CoinbaseOHLCVCollector(granularity="1h", lookback_hours=48).run()
+        return CoinbaseOHLCVCollector(granularity="1h", lookback_hours=2).run()
     except Exception as exc:
         raise self.retry(exc=exc)
 
@@ -211,5 +211,32 @@ def generate_single_signal_task(self, symbol: str):
     try:
         from app.ai.signals import generate_signal
         return generate_signal(symbol)
+    except Exception as exc:
+        raise self.retry(exc=exc)
+
+
+# =============================================================================
+# Step 5 — Paper trading tasks
+# =============================================================================
+
+app.conf.task_routes.update({
+    "celery_app.trading_cycle_task": {"queue": "trading"},
+})
+
+app.conf.beat_schedule.update({
+    # Trading runs at :35 — after AI signals are generated at :30
+    "trading-cycle-hourly": {
+        "task":     "celery_app.trading_cycle_task",
+        "schedule": crontab(minute=35),
+    },
+})
+
+
+@app.task(bind=True, max_retries=2, default_retry_delay=60, name="celery_app.trading_cycle_task")
+def trading_cycle_task(self):
+    """Execute paper trades based on latest AI signals."""
+    try:
+        from app.trading.engine import run_trading_cycle
+        return run_trading_cycle()
     except Exception as exc:
         raise self.retry(exc=exc)

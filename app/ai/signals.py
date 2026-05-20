@@ -87,11 +87,20 @@ def build_prompt(symbol: str) -> str:
     if candles:
         lines.append("### Recent OHLCV (last 10 hourly candles, newest last)")
         lines.append("timestamp | open | high | low | close | volume")
+
+        # Calculate median volume to detect and filter outliers
+        volumes = [float(c["volume"]) for c in candles if float(c["volume"]) > 0]
+        volumes.sort()
+        median_vol = volumes[len(volumes)//2] if volumes else 1
+        vol_cap = median_vol * 1000  # anything 1000x median is clearly bad data
+
         for c in candles:
-            ts = str(c["ts"])[:16]
+            ts  = str(c["ts"])[:16]
+            vol = float(c["volume"])
+            vol_display = f"{vol:.2f}" if vol < vol_cap else "N/A"
             lines.append(
                 f"{ts} | {float(c['open']):.2f} | {float(c['high']):.2f} | "
-                f"{float(c['low']):.2f} | {float(c['close']):.2f} | {float(c['volume']):.2f}"
+                f"{float(c['low']):.2f} | {float(c['close']):.2f} | {vol_display}"
             )
         current_price = float(candles[-1]["close"])
         lines.append(f"\nCurrent price: ${current_price:,.2f}\n")
@@ -127,10 +136,6 @@ def build_prompt(symbol: str) -> str:
     if fg:
         lines.append(f"### Market Sentiment")
         lines.append(f"Fear & Greed Index: {fg['value']}/100 — {fg['label']}")
-        if fg["value"] <= 25:
-            lines.append("  → Extreme Fear: historically a strong buy signal")
-        elif fg["value"] >= 75:
-            lines.append("  → Extreme Greed: historically a sell/caution signal")
         lines.append("")
 
     # ── News headlines ────────────────────────────────────────────────────────
