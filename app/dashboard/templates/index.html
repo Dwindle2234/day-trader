@@ -131,12 +131,14 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-  /* ── Symbol buttons ── */
-  .sym-btn { background: var(--bg); border: 1px solid var(--border); color: var(--muted);
-             padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;
-             font-weight: 600; transition: all .15s; }
-  .sym-btn:hover { border-color: var(--muted); color: var(--text); }
+  /* ── Symbol + timeframe buttons ── */
+  .sym-btn, .tf-btn {
+    background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+    padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;
+    font-weight: 600; transition: all .15s; }
+  .sym-btn:hover, .tf-btn:hover { border-color: var(--muted); color: var(--text); }
   .sym-btn.active { background: var(--blue); color: #000; border-color: var(--blue); }
+  .tf-btn.active  { background: var(--yellow); color: #000; border-color: var(--yellow); }
 
   /* ── Total value ── */
   .portfolio-value { font-size: 2rem; font-weight: 900; letter-spacing: -.02em;
@@ -226,9 +228,18 @@
 
     <!-- Chart -->
     <div class="card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
         <div class="card-title" style="margin:0" id="chart-title">Price Chart</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap" id="chart-symbols"></div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <div style="display:flex;gap:4px" id="chart-timeframes">
+            <button class="tf-btn active" onclick="setTimeframe(72,this)">3D</button>
+            <button class="tf-btn" onclick="setTimeframe(168,this)">7D</button>
+            <button class="tf-btn" onclick="setTimeframe(336,this)">14D</button>
+            <button class="tf-btn" onclick="setTimeframe(720,this)">30D</button>
+          </div>
+          <div style="width:1px;height:20px;background:var(--border)"></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap" id="chart-symbols"></div>
+        </div>
       </div>
       <div id="priceChart" class="chart-wrap"></div>
       <div style="margin-top:6px;font-size:10px;color:var(--muted);text-align:right">RSI(14)</div>
@@ -369,7 +380,19 @@ async function loadPrices() {
 // ── Chart (TradingView Lightweight Charts) ────────────────────────────────────
 let lwChart = null, candleSeries = null, bbUpperSeries = null,
     bbMidSeries = null, bbLowerSeries = null, rsiLwChart = null,
-    rsiSeries = null, activeSymbol = null;
+    rsiSeries = null, activeSymbol = null, activeLimit = 72;
+
+function setTimeframe(limit, btn) {
+  activeLimit = limit;
+  document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const labels = {72:'3D', 168:'7D', 336:'14D', 720:'30D'};
+  if (activeSymbol) {
+    document.getElementById('chart-title').textContent =
+      activeSymbol + ' — ' + (labels[limit] || limit+'h');
+    loadChart(activeSymbol);
+  }
+}
 
 const CHART_THEME = {
   layout:     { background: { color: '#13131a' }, textColor: '#9090b0' },
@@ -437,10 +460,12 @@ function initCharts() {
 
 async function loadChart(symbol) {
   activeSymbol = symbol;
-  document.getElementById('chart-title').textContent = symbol + ' — 72h';
-
-  const d = await fetch(`/api/chart/${symbol}`).then(r => r.json());
+  const d = await fetch(`/api/chart/${symbol}/${activeLimit}`).then(r => r.json());
   if (d.error || !d.labels.length) return;
+
+  const tfLabels = {72:'3D', 168:'7D', 336:'14D', 720:'30D'};
+  const tfLabel = tfLabels[activeLimit] || activeLimit + 'h';
+  document.getElementById('chart-title').textContent = symbol + ' — ' + tfLabel + (d.labels.length < activeLimit ? ' ('+d.labels.length+'h available)' : '');
 
   // Initialise charts on first load or if destroyed
   if (!lwChart) initCharts();

@@ -9,3 +9,4 @@ build/
 .DS_Store
 celerybeat-schedule
 celerybeat.pid
+/__pycache__

@@ -58,6 +58,9 @@ services:
           memory: 512M
 
 volumes:
-  # Named volume — survives `docker compose down` but NOT `docker compose down -v`
   crypto_data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/cache/appdata/crypto-trader

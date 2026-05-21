@@ -109,7 +109,9 @@ def api_prices():
 
 
 @app.route("/api/chart/<symbol>")
-def api_chart(symbol):
+@app.route("/api/chart/<symbol>/<int:limit>")
+def api_chart(symbol, limit=72):
+    limit = max(24, min(limit, 720))  # clamp between 24 and 720 bars
     try:
         engine = get_engine()
         with engine.connect() as conn:
@@ -121,8 +123,8 @@ def api_chart(symbol):
                 LEFT   JOIN indicators i
                        ON i.symbol=o.symbol AND i.granularity=o.granularity AND i.ts=o.ts
                 WHERE  o.symbol=:s AND o.granularity='1h'
-                ORDER  BY o.ts DESC LIMIT 72
-            """), {"s": symbol}).fetchall()
+                ORDER  BY o.ts DESC LIMIT :limit
+            """), {"s": symbol, "limit": limit}).fetchall()
         rows = list(reversed(rows))
         return jsonify({
             "symbol":      symbol,
